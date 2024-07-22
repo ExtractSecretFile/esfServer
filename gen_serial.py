@@ -22,13 +22,18 @@ r = redis.StrictRedis(
 
 def generate_serial_number():
     uuid_ = uuid.uuid4()
-    return str(uuid.uuid5(uuid_, "authkey"))
+    return str(uuid.uuid5(uuid_, "authkey"))[:8]
 
 
 def add_new_serial_numbers(count_):
-    for _ in range(count_):
+    i = 0
+    while i < count_:
         serial_number = generate_serial_number()
         try:
+            sn = r.get(serial_number)
+            if sn is not None:
+                count_ += 1
+                continue
             # 空 key 表示未注册
             r.set(serial_number, "")
         # 连接错误
@@ -36,6 +41,8 @@ def add_new_serial_numbers(count_):
             print("连接失败！")
             break
         print(f"{serial_number}")
+
+        i += 1
 
 
 def main():
