@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import redis
 import uvicorn
@@ -30,6 +31,7 @@ class RegistrationRequest(BaseModel):
 
 
 class RegistrationResponse(BaseModel):
+    error: Optional[str]
     verified: bool
 
 
@@ -58,6 +60,15 @@ async def register(data: RegistrationRequest):
         return {"verified": True}
 
 
-if __name__ == "__main__":
+def main():
+    """
+    verify api
+    """
     api_port = os.getenv("API_PORT")
-    uvicorn.run(app, host="0.0.0.0", port=api_port)
+    uvicorn.run(app,
+                 # public
+                 host="0.0.0.0", port=api_port)
+
+
+if __name__ == "__main__":
+    main()

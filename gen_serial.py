@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 
 import redis
@@ -20,28 +21,31 @@ r = redis.StrictRedis(
 
 
 def generate_serial_number():
-    return str(uuid.uuid4())
+    uuid_ = uuid.uuid4()
+    return str(uuid.uuid5(uuid_, "authkey"))
 
 
 def add_new_serial_numbers(count_):
     for _ in range(count_):
         serial_number = generate_serial_number()
-        # 空 key 表示未注册
         try:
+            # 空 key 表示未注册
             r.set(serial_number, "")
         # 连接错误
         except redis.ConnectionError:
             print("连接失败！")
             break
-        print(f"Generated serial number: {serial_number}")
+        print(f"{serial_number}")
 
 
-if __name__ == "__main__":
-    import sys
-
+def main():
     if len(sys.argv) != 2:
         print("Usage: python generate_serials.py <count>")
         sys.exit(1)
 
     count = int(sys.argv[1])
     add_new_serial_numbers(count)
+
+
+if __name__ == "__main__":
+    main()
