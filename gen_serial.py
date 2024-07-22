@@ -9,9 +9,14 @@ load_dotenv()
 
 # 从环境变量中获取 Redis 密码
 redis_password = os.getenv("REDIS_PASSWORD")
+redis_host = os.getenv("REDIS_HOST")
+redis_port = int(os.getenv("REDIS_PORT"))
+redis_db = int(os.getenv("REDIS_DB"))
 
 # 配置 Redis 数据库
-r = redis.StrictRedis(host="localhost", port=6379, db=0, password=redis_password)
+r = redis.StrictRedis(
+    host=redis_host, port=redis_port, db=redis_db, password=redis_password
+)
 
 
 def generate_serial_number():
@@ -25,7 +30,7 @@ def add_new_serial_numbers(count_):
         try:
             r.set(serial_number, "")
         # 连接错误
-        except redis.exceptions.ConnectionError:
+        except redis.ConnectionError:
             print("连接失败！")
             break
         print(f"Generated serial number: {serial_number}")
