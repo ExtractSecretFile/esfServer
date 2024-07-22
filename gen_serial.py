@@ -22,7 +22,12 @@ def add_new_serial_numbers(count_):
     for _ in range(count_):
         serial_number = generate_serial_number()
         # 空 key 表示未注册
-        r.set(serial_number, "")
+        try:
+            r.set(serial_number, "")
+        # 连接错误
+        except redis.exceptions.ConnectionError:
+            print("连接失败！")
+            break
         print(f"Generated serial number: {serial_number}")
 
 
