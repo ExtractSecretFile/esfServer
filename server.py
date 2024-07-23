@@ -46,18 +46,18 @@ async def register(data: RegistrationRequest):
     except redis.ConnectionError:
         return {"error": "Failed to connect backend DB", "verified": False}
 
-    if existing_code:
+    if existing_code is not None and existing_code:
         if existing_code.decode("utf-8") == registration_code:
-            return {"verified": True}
+            return {"verified": True, "error": None}
         else:
-            return {"verified": False}
+            return {"verified": False, "error": "Already registered"}
     else:
         # 注册新的序列号
         try:
             r.set(serial_number, registration_code)
         except redis.ConnectionError:
             return {"error": "Failed to connect backend DB", "verified": False}
-        return {"verified": True}
+        return {"verified": True, "error": None}
 
 
 def main():
