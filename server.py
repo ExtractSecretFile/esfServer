@@ -35,6 +35,35 @@ class RegistrationResponse(BaseModel):
     verified: bool
 
 
+class ValidateRequest(BaseModel):
+    serial_number: str
+
+
+class ValidateResponse(BaseModel):
+    used: bool
+    error: Optional[str]
+    regkey: Optional[str]
+
+
+@app.post("/validate", response_model=ValidateResponse)
+async def validate(data: ValidateRequest):
+    sn = data.serial_number
+
+    try:
+        existing_code = r.get(sn)
+    except redis.ConnectionError:
+        return {"error": "Failed to connect backend DB", "used": False}
+
+    re = {"error": None, "used": bool(existing_code), "regkey": None}
+
+    if existing_code is None:  # not existing
+        re["error"] = "Invalid Registeration code!"
+    else:
+        re["regkey"] = existing_code.decode("utf-8")
+
+    return re
+
+
 @app.post("/register", response_model=RegistrationResponse)
 async def register(data: RegistrationRequest):
     serial_number = data.serial_number
@@ -71,9 +100,12 @@ def main():
     verify api
     """
     api_port = os.getenv("API_PORT")
-    uvicorn.run(app,
-                 # public
-                 host="0.0.0.0", port=api_port)
+    uvicorn.run(
+        app,
+        # public
+        host="0.0.0.0",
+        port=api_port,
+    )
 
 
 if __name__ == "__main__":
