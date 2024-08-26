@@ -20,10 +20,14 @@ redis_password = os.getenv("REDIS_PASSWORD")
 redis_host = os.getenv("REDIS_HOST")
 redis_port = int(os.getenv("REDIS_PORT"))
 redis_db = int(os.getenv("REDIS_DB"))
+redis_lookup_db = int(os.getenv("REDIS_LOOKUP_DB"))
 
 # 配置 Redis 数据库
 r = redis.StrictRedis(
     host=redis_host, port=redis_port, db=redis_db, password=redis_password
+)
+r_lookup = redis.StrictRedis(
+    host=redis_host, port=redis_port, db=redis_lookup_db, password=redis_password
 )
 
 
@@ -59,17 +63,11 @@ class ReverseResponse(BaseModel):
 
 @app.post("/reverse", response_model=ReverseResponse)
 async def reverse(data: ReverseRequest):
-    target_regcode = data.registeration_code
-    sn = None
+    regcode = data.registeration_code
     try:
-        async for key in r.scan_iter(count=16384):
-            regcode = (await r.get(key)).decode("utf-8")
-            if regcode == target_regcode:
-                sn = key.decode("utf-8")
-                break
+        sn = await r_lookup.get(regcode)
     except redis.ConnectionError:
-        # don't drop the incomplete result
-        return {"error": REDIS_ERROR, "serial_number": sn}
+        return {"error": REDIS_ERROR, "serial_number": None}
 
     return {"error": None, "serial_number": sn}
 
@@ -119,6 +117,8 @@ async def register(data: RegistrationRequest):
         # 注册新的序列号
         try:
             await r.set(serial_number, registration_code)
+            print(registration_code, serial_number)
+            await r_lookup.set(registration_code, serial_number)
         except redis.ConnectionError:
             return {"error": REDIS_ERROR, "verified": False}
         return {"verified": True, "error": None}
