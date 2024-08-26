@@ -1,11 +1,14 @@
 import os
 from typing import Optional
 
-import redis
+import redis.asyncio as redis
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
+
+REDIS_ERROR = "Failed to connect backend DB"
+KEY_NOT_EXISTING = "Invalid Registeration code!"
 
 # 加载 .env 文件
 load_dotenv()
@@ -31,8 +34,8 @@ class RegistrationRequest(BaseModel):
 
 
 class RegistrationResponse(BaseModel):
-    error: Optional[str]
     verified: bool
+    error: Optional[str]
 
 
 class ValidateRequest(BaseModel):
@@ -45,19 +48,45 @@ class ValidateResponse(BaseModel):
     regkey: Optional[str]
 
 
+class ReverseRequest(BaseModel):
+    registeration_code: str
+
+
+class ReverseResponse(BaseModel):
+    serial_number: Optional[str]
+    error: Optional[str]
+
+
+@app.post("/reverse", response_model=ReverseResponse)
+async def reverse(data: ReverseRequest):
+    target_regcode = data.registeration_code
+    sn = None
+    try:
+        async for key in r.scan_iter(count=16384):
+            regcode = (await r.get(key)).decode("utf-8")
+            if regcode == target_regcode:
+                sn = key.decode("utf-8")
+                break
+    except redis.ConnectionError:
+        # don't drop the incomplete result
+        return {"error": REDIS_ERROR, "serial_number": sn}
+
+    return {"error": None, "serial_number": sn}
+
+
 @app.post("/validate", response_model=ValidateResponse)
 async def validate(data: ValidateRequest):
     sn = data.serial_number
 
     try:
-        existing_code = r.get(sn)
+        existing_code = await r.get(sn)
     except redis.ConnectionError:
-        return {"error": "Failed to connect backend DB", "used": False}
+        return {"error": REDIS_ERROR, "used": False}
 
     re = {"error": None, "used": bool(existing_code), "regkey": None}
 
     if existing_code is None:  # not existing
-        re["error"] = "Invalid Registeration code!"
+        re["error"] = KEY_NOT_EXISTING
     else:
         re["regkey"] = existing_code.decode("utf-8")
 
@@ -72,13 +101,13 @@ async def register(data: RegistrationRequest):
     print(serial_number)
     # 检查序列号是否已经注册
     try:
-        existing_code = r.get(serial_number)
+        existing_code = await r.get(serial_number)
     except redis.ConnectionError:
-        return {"error": "Failed to connect backend DB", "verified": False}
+        return {"error": REDIS_ERROR, "verified": False}
 
     # 不存在
     if existing_code is None:
-        return {"verified": False, "error": "Invalid Registeration code!"}
+        return {"verified": False, "error": KEY_NOT_EXISTING}
 
     # 存在且非空
     if existing_code:
@@ -89,9 +118,9 @@ async def register(data: RegistrationRequest):
     else:
         # 注册新的序列号
         try:
-            r.set(serial_number, registration_code)
+            await r.set(serial_number, registration_code)
         except redis.ConnectionError:
-            return {"error": "Failed to connect backend DB", "verified": False}
+            return {"error": REDIS_ERROR, "verified": False}
         return {"verified": True, "error": None}
 
 
