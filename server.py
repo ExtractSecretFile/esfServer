@@ -170,7 +170,7 @@ def main():
     """
     verify api
     """
-    api_port = os.getenv("API_PORT")
+    api_port = int(os.getenv("API_PORT"))
     uvicorn.run(
         app,
         # public
