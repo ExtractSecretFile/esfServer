@@ -113,8 +113,9 @@ async def validate(data: ValidateRequest):
         result["error"] = KEY_NOT_EXISTING
         result["used"] = False
     else:
-        result["regkey"] = existing_code.decode("utf-8")
-        result["used"] = True
+        existing_code = existing_code.decode("utf-8")
+        result["used"] = existing_code != ""
+        result["regkey"] = existing_code
 
     try:
         result["regtime"] = await r_time.get(sn)
