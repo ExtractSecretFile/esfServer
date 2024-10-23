@@ -1,26 +1,31 @@
+import sys
+import asyncio
 import random
 from string import digits, ascii_lowercase
 
-import requests
-
-TIMES = 100
+import aiohttp
 
 
-def main():
+async def main():
     alphanum = digits + ascii_lowercase
     rand = random.Random()
+    times = int(sys.argv[1])
 
-    for _ in range(TIMES + 1):
-        key = "".join(rand.choices(alphanum, k=9))
-        result = requests.post(
-            "http://127.0.0.1:8000/register",
+    keys = ["".join(rand.choices(alphanum, k=9)) for _ in range(times + 1)]
+
+    async def proc_single(key: str):
+        async with session.post(
+            "http://8.134.130.103:8000/register",
             json={
-                "serial_number": "bdcbf46e1b",
+                "serial_number": "103e75f5",
                 "registration_code": key,
             },
-        )
-        print(result.text)
+        ) as result:
+            print(await result.text())
+
+    async with aiohttp.ClientSession() as session:
+        await asyncio.gather(*(proc_single(key) for key in keys))
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
