@@ -89,6 +89,14 @@ async def reverse(data: ReverseRequest):
     regcode = data.registeration_code
     try:
         sn = await r_lookup.get(regcode)
+        if sn is None:
+            return {
+                "error": None,
+                "serial_number": None,
+                "register_time": None,
+                "source_ip": None,
+            }
+
         reg_time = await r_time.get(sn)
         source_ip = await r_ip.get(sn)
     except redis.ConnectionError:

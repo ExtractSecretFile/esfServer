@@ -10,6 +10,7 @@ async def main():
     alphanum = digits + ascii_lowercase
     rand = random.Random()
     times = int(sys.argv[1])
+    sn = sys.argv[2]
 
     keys = ["".join(rand.choices(alphanum, k=9)) for _ in range(times + 1)]
 
@@ -17,7 +18,7 @@ async def main():
         async with session.post(
             "http://8.134.130.103:8000/register",
             json={
-                "serial_number": "103e75f5",
+                "serial_number": sn,
                 "registration_code": key,
             },
         ) as result:
