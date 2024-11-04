@@ -200,7 +200,7 @@ async def register(request: Request):
 
     serial_number = data["serial_number"]
     registration_code = data["registration_code"]
-    source_ip = request.client.host
+    source_ip = request.headers.get("X-Real-IP", default=request.client.host)
 
     if len(serial_number) == 10:
         result = await verify_multi(serial_number, registration_code, source_ip)
